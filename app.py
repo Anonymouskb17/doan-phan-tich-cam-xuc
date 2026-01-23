@@ -5,16 +5,27 @@ from joblib import load
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-st.set_page_config(page_title="Kết quả dự đoán", layout="wide")
-st.title("Kết quả dự đoán")
+st.set_page_config(page_title="Dự đoán cảm xúc", layout="wide")
+st.title("Dự đoán cảm xúc bình luận")
 
-MODEL_PATH = "ecommerce_logistic_sentiment_model.joblib"
+# =======================
+# Cấu hình đường dẫn
+# =======================
 DATA_PATH = "data_final.xlsx"
 SHEET_NAME = "Sheet1"
 
+# Đổi lại đúng tên file model của bạn
+MODELS = {
+    "SVM": "ecommerce_svm_sentiment_model.joblib",
+    "Logistic Regression": "ecommerce_logistic_sentiment_model.joblib",
+}
+
+# =======================
+# Load model + data
+# =======================
 @st.cache_resource
-def load_model():
-    return load(MODEL_PATH)
+def load_model(model_path: str):
+    return load(model_path)
 
 @st.cache_data
 def load_data():
@@ -29,41 +40,100 @@ def load_data():
 
     df["final_comment"] = df["final_comment"].fillna("").astype(str)
     df["comment"] = df["comment"].fillna("").astype(str)
+    df["label"] = df["label"].astype(str)
     return df
 
-if not os.path.exists(MODEL_PATH):
-    st.error(f"Không thấy file model: {MODEL_PATH}")
-    st.stop()
+def preprocess_input(text: str) -> str:
+    return (text or "").strip()
 
+# =======================
+# Kiểm tra file dữ liệu
+# =======================
 if not os.path.exists(DATA_PATH):
     st.error(f"Không thấy file dữ liệu: {DATA_PATH}")
     st.stop()
 
-model = load_model()
 df = load_data()
+
+# =======================
+# Chọn mô hình (1 trang)
+# =======================
+st.subheader("Chọn thuật toán")
+model_name = st.selectbox("Thuật toán:", list(MODELS.keys()), index=0)
+MODEL_PATH = MODELS[model_name]
+
+if not os.path.exists(MODEL_PATH):
+    st.error(f"Không thấy file model cho '{model_name}': {MODEL_PATH}")
+    st.stop()
+
+model = load_model(MODEL_PATH)
+
+st.divider()
+
+# =======================
+# Dự đoán nhanh
+# =======================
+st.subheader("Dự đoán nhanh (nhập bình luận)")
+user_text = st.text_area(
+    "Nhập nội dung bình luận:",
+    placeholder="Ví dụ: Sản phẩm tốt, giao hàng nhanh, sẽ ủng hộ lần sau!",
+    height=120
+)
+
+col1, col2 = st.columns([1, 3])
+with col1:
+    do_predict = st.button("Dự đoán", type="primary")
+with col2:
+    st.caption(f"Đang dùng mô hình: **{model_name}**")
+
+if do_predict:
+    text = preprocess_input(user_text)
+    if not text:
+        st.warning("Bạn chưa nhập bình luận.")
+    else:
+        pred = model.predict([text])[0]
+        st.success(f"Kết quả dự đoán ({model_name}): **{pred}**")
+
+        # Nếu model có predict_proba thì hiển thị xác suất
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba([text])[0]
+            classes = getattr(model, "classes_", list(range(len(proba))))
+            proba_df = (
+                pd.DataFrame({"class": classes, "probability": proba})
+                .sort_values("probability", ascending=False)
+                .reset_index(drop=True)
+            )
+            st.write("Xác suất theo từng lớp:")
+            st.dataframe(proba_df, use_container_width=True)
+
+        st.caption(f"Nội dung dùng để dự đoán: {text}")
+
+st.divider()
+
+# =======================
+# Đánh giá trên tập test
+# =======================
+st.subheader("Đánh giá mô hình trên tập test")
 
 X = df["final_comment"]
 y = df["label"]
 
+# Lưu ý: stratify=y để giữ tỉ lệ lớp
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# Tự chạy luôn
 y_pred = model.predict(X_test)
 acc = accuracy_score(y_test, y_pred)
 
-st.subheader("Kết quả")
-st.write(f"Accuracy: **{acc:.4f}**")
-
+st.write(f"Accuracy ({model_name}): **{acc:.4f}**")
 
 st.subheader("Bảng dự đoán")
 test_results = pd.DataFrame({
-    "comment": df.loc[X_test.index, "comment"].astype(str).values,
-     "final_comment": pd.Series(X_test.values).str.replace("_", " ", regex=False).values,
+    "comment": df.loc[X_test.index, "comment"].astype(str),
+    "final_comment": X_test.astype(str),
     "true": y_test.values,
     "predict": y_pred
 })
-
 
 st.dataframe(test_results, use_container_width=True)

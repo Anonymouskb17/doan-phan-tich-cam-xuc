@@ -10,11 +10,10 @@ import os
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Train Logistic TF-IDF sentiment model')
-    parser.add_argument('--save-test-csv', type=str, default=None, help='Path to save test predictions CSV')
-    parser.add_argument('--model-out', type=str, default='ecommerce_logistic_sentiment_model.joblib',
-                        help='Path to save trained model')
-    args = parser.parse_args()
+    
+    save_test_csv = None
+    model_out = 'ecommerce_logistic_sentiment_model.joblib'
+   
 
     print("Đang đọc dữ liệu đã làm sạch...\n")
 
@@ -48,14 +47,15 @@ def main():
             ngram_range=(1, 4),
             min_df=2,
             max_df=0.9,
-            lowercase=False
+            
         ),
         LogisticRegression(
             C=1.0,
             solver="lbfgs",
             max_iter=5000,
-            class_weight="balanced",
-            multi_class="auto"
+            # class_weight="balanced",
+            # multi_class='ovr'
+           
         )
     )
 
@@ -63,13 +63,21 @@ def main():
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
+    labels_sorted = sorted(pd.unique(y))
+    print("\n=== : Logistic Regression model ===")
+    print(classification_report(
+        y_test, y_pred,
+        labels=labels_sorted,
+        digits=2,          
+        zero_division=0
+    ))
 
     acc = accuracy_score(y_test, y_pred)
     print(f"Train size: {len(X_train):,} | Test size: {len(X_test):,}")
     print(f"Accuracy: {acc:.4f} ({acc:.2%})")
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
-    print("=" * 70)
+    # print("\nClassification Report:")
+    # print(classification_report(y_test, y_pred))
+    # print("=" * 70)
 
     # Bảng kết quả test để lưu (không in ra)
     test_results = pd.DataFrame({
@@ -80,17 +88,18 @@ def main():
     }).reset_index(drop=True)
 
     # Lưu file test predictions nếu user yêu cầu
-    if args.save_test_csv:
+    if save_test_csv:
         try:
-            test_results.to_csv(args.save_test_csv, index=False, encoding='utf-8-sig')
-            print(f"Test predictions saved to: {os.path.abspath(args.save_test_csv)}")
+            test_results.to_csv(save_test_csv, index=False, encoding='utf-8-sig')
+            print(f"Test predictions saved to: {os.path.abspath(save_test_csv)}")
         except Exception as e:
             print(f"Không thể lưu test results: {e}")
 
     # Lưu mô hình
-    dump(model, args.model_out)
-    print(f"\nMÔ HÌNH ĐÃ ĐƯỢC LƯU: {os.path.abspath(args.model_out)}")
+    dump(model, model_out)
+    print(f"\nMÔ HÌNH ĐÃ ĐƯỢC LƯU: {os.path.abspath(model_out)}")
 
 
 if __name__ == '__main__':
     main()
+
