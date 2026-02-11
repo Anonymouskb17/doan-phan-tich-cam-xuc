@@ -43,12 +43,10 @@ REPLACE_MAP = {
     r"\bhok\b": "không",
     r"\bhem\b": "không",
     r"\bkg\b": "không",
-
     r"\btks\b": "cảm_ơn",
     r"\bthanks\b": "cảm_ơn",
     r"\bthank\b": "cảm_ơn",
     r"\btk\b": "cảm_ơn",
-
     r"\boke\b": "ok",
     r"\bokie\b": "ok",
     r"\bokela\b": "ok",
@@ -60,10 +58,10 @@ def clean_text(text: str) -> str:
 
     text = str(text).lower()
 
-    # Xóa link, email, sđt
+  
     text = re.sub(r'http[s]?://\S+|www\.\S+|\S+@\S+|\b0\d{9,10}\b', ' ', text)
 
-    # Xóa emoji (theo yêu cầu)
+    
     emoji_pattern = re.compile(
         "[\U0001F600-\U0001F64F"
         "\U0001F300-\U0001F5FF"
@@ -74,9 +72,27 @@ def clean_text(text: str) -> str:
     text = emoji_pattern.sub(" ", text)
 
 
-    text = re.sub(r"(.)\1{3,}", r"\1\1", text)
+    text = re.sub(r"(.)\1{3,}", r"\1", text)
 
   
+    REPLACE_MAP = {
+    r"\bko\b": "không",
+    r"\bk\b": "không",
+    r"\bkh\b": "không",
+    r"\bhok\b": "không",
+    r"\bhong\b": "không",
+    r"\bhông\b": "không",
+    r"\bhok\b": "không",
+    r"\bhem\b": "không",
+    r"\bkg\b": "không",
+    r"\btks\b": "cảm_ơn",
+    r"\bthanks\b": "cảm_ơn",
+    r"\bthank\b": "cảm_ơn",
+    r"\btk\b": "cảm_ơn",
+    r"\boke\b": "ok",
+    r"\bokie\b": "ok",
+    r"\bokela\b": "ok",
+}
     for pattern, repl in REPLACE_MAP.items():
         text = re.sub(pattern, repl, text)
 

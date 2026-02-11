@@ -4,17 +4,16 @@ import streamlit as st
 from joblib import load
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from tienxuly import clean_text, tokenize_stopwords
 
 st.set_page_config(page_title="Dự đoán cảm xúc", layout="wide")
 st.title("Dự đoán cảm xúc bình luận")
 
-# =======================
-# Cấu hình đường dẫn
-# =======================
+
 DATA_PATH = "data_final.xlsx"
 SHEET_NAME = "Sheet1"
 
-# Đổi lại đúng tên file model của bạn
+
 MODELS = {
     "SVM": "ecommerce_svm_sentiment_model.joblib",
     "Logistic Regression": "ecommerce_logistic_sentiment_model.joblib",
@@ -46,18 +45,14 @@ def load_data():
 def preprocess_input(text: str) -> str:
     return (text or "").strip()
 
-# =======================
-# Kiểm tra file dữ liệu
-# =======================
+
 if not os.path.exists(DATA_PATH):
     st.error(f"Không thấy file dữ liệu: {DATA_PATH}")
     st.stop()
 
 df = load_data()
 
-# =======================
-# Chọn mô hình (1 trang)
-# =======================
+
 st.subheader("Chọn thuật toán")
 model_name = st.selectbox("Thuật toán:", list(MODELS.keys()), index=0)
 MODEL_PATH = MODELS[model_name]
@@ -70,10 +65,8 @@ model = load_model(MODEL_PATH)
 
 st.divider()
 
-# =======================
-# Dự đoán nhanh
-# =======================
-st.subheader("Dự đoán nhanh (nhập bình luận)")
+
+st.subheader("Dự đoán (nhập bình luận)")
 user_text = st.text_area(
     "Nhập nội dung bình luận:",
     placeholder="Ví dụ: Sản phẩm tốt, giao hàng nhanh, sẽ ủng hộ lần sau!",
@@ -91,22 +84,36 @@ if do_predict:
     if not text:
         st.warning("Bạn chưa nhập bình luận.")
     else:
-        pred = model.predict([text])[0]
-        st.success(f"Kết quả dự đoán ({model_name}): **{pred}**")
+      
+        cleaned = clean_text(text)
+        final = tokenize_stopwords(cleaned)
+        
+        if not final.strip():
+            st.warning("Bình luận không hợp lệ sau xử lý (chỉ chứa ký tự đặc biệt, không có từ khóa).")
+        else:
+            pred = model.predict([final])[0]
+            
+            if pred == "POS":
+                sentiment = "POS (Tích cực)"
+            elif pred == "NEU":
+                sentiment = "NEU (Trung lập)"
+            elif pred == "NEG":
+                sentiment = "NEG (Tiêu cực)"
+            st.success(f"Kết quả dự đoán ({model_name}): **{sentiment}**")
 
-        # Nếu model có predict_proba thì hiển thị xác suất
-        if hasattr(model, "predict_proba"):
-            proba = model.predict_proba([text])[0]
-            classes = getattr(model, "classes_", list(range(len(proba))))
-            proba_df = (
-                pd.DataFrame({"class": classes, "probability": proba})
-                .sort_values("probability", ascending=False)
-                .reset_index(drop=True)
-            )
-            st.write("Xác suất theo từng lớp:")
-            st.dataframe(proba_df, use_container_width=True)
+            # Nếu model có predict_proba thì hiển thị xác suất
+            # if hasattr(model, "predict_proba"):
+            #     proba = model.predict_proba([text])[0]
+            #     classes = getattr(model, "classes_", list(range(len(proba))))
+            #     proba_df = (
+            #         pd.DataFrame({"class": classes, "probability": proba})
+            #         .sort_values("probability", ascending=False)
+            #         .reset_index(drop=True)
+            #     )
+            #     st.write("Xác suất theo từng lớp:")
+            #     st.dataframe(proba_df, use_container_width=True)
 
-        st.caption(f"Nội dung dùng để dự đoán: {text}")
+            # st.caption(f"Nội dung dùng để dự đoán: {text}")
 
 st.divider()
 

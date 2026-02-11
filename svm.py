@@ -52,23 +52,17 @@ def main():
             ngram_range=(1, 4),
             min_df=2,
             max_df=0.9,
-          
-          
         ),
         SVC(kernel = "linear",C=1, class_weight='balanced')
-        # SVC(kernel="poly", degree=2, C=1, gamma="scale", coef0=1, class_weight="balanced")
-
     )
-
+    
+    
+ # SVC(kernel="poly", degree=2, C=1, gamma="scale", coef0=1, class_weight="balanced")
     print("Đang huấn luyện mô hình ...")
     model.fit(X_train, y_train)   
     y_pred = model.predict(X_test)  
     print("\n=== Evaluation report: SVM model ===")
-    print(classification_report(
-    y_test, y_pred,
-    digits=2,          
-    zero_division=0
-))
+    print(classification_report(y_test, y_pred,digits=2,zero_division=0))
 
   
     acc = accuracy_score(y_test, y_pred)

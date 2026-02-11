@@ -53,21 +53,21 @@ def main():
             C=1.0,
             solver="lbfgs",
             max_iter=5000,
-            # class_weight="balanced",
-            # multi_class='ovr'
+            class_weight='balanced'
            
         )
     )
+
 
     print("Đang huấn luyện mô hình ...")
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
-    labels_sorted = sorted(pd.unique(y))
+    # labels_sorted = sorted(pd.unique(y))
     print("\n=== : Logistic Regression model ===")
     print(classification_report(
         y_test, y_pred,
-        labels=labels_sorted,
+        # labels=labels_sorted,
         digits=2,          
         zero_division=0
     ))
@@ -87,7 +87,7 @@ def main():
         'pred': y_pred
     }).reset_index(drop=True)
 
-    # Lưu file test predictions nếu user yêu cầu
+    
     if save_test_csv:
         try:
             test_results.to_csv(save_test_csv, index=False, encoding='utf-8-sig')
